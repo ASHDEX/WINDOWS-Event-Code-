@@ -1,170 +1,226 @@
-# WINDOWS-Event-Code-
-Win events code 
+## 🔐 **Kerberos Authentication Workflow Overview**
 
-🔐 Kerberos Authentication Workflow Overview
 Kerberos is a secure method for authenticating a request for a service in a computer network. The key components involved are:
 
-KDC (Key Distribution Center) – The domain controller offering authentication services.
+- **KDC (Key Distribution Center)** – The domain controller offering authentication services.
+    
+- **TGT (Ticket Granting Ticket)** – Initial ticket obtained upon successful logon.
+    
+- **ST (Service Ticket)** – Ticket used to access specific network services.
+    
+- **SPN (Service Principal Name)** – Unique identifier for each service in the domain.
+    
+
+---
+
+## 🧾 **Detailed Breakdown of Kerberos and Account-Related Event IDs**
+
+---
+
+### **4768 - A Kerberos authentication ticket (TGT) was requested**
+
+- **Triggered When**: A user logs on or a machine starts up and requests a TGT from the KDC.
+    
+- **Key Fields**:
+    
+    - `Account Name`
+        
+    - `Client Address` (IP of requester)
+        
+    - `Ticket Encryption Type` (e.g., AES, RC4)
+        
+- **Security Use Case**:
+    
+    - Baseline logon patterns
+        
+    - Detect unusual logon sources or high frequency of TGT requests
+        
+
+---
+
+### **4769 - A Kerberos service ticket was requested**
+
+- **Triggered When**: A user with a valid TGT requests access to a service (e.g., file server).
+    
+- **Key Fields**:
+    
+    - `Service Name` (SPN requested)
+        
+    - `Client Address`
+        
+- **Security Use Case**:
+    
+    - Map lateral movement (e.g., mimikatz pass-the-ticket)
+        
+    - Detect unusual SPNs or high-volume ST requests
+        
+
+---
+
+### **4770 - A Kerberos service ticket was renewed**
+
+- **Triggered When**: A service ticket is renewed (valid for another time period).
+    
+- **Key Fields**:
+    
+    - `Renewed Ticket Encryption Type`
+        
+    - `Service Name`
+        
+- **Security Use Case**:
+    
+    - Rarely used in alerts but can track abnormal persistence of sessions
+        
+
+---
+
+### **4771 - Kerberos pre-authentication failed**
+
+- **Triggered When**: A user attempts to log on but fails at the pre-authentication stage.
+    
+- **Key Fields**:
+    
+    - `Failure Code` (e.g., 0x18 = bad password)
+        
+    - `Client Address`
+        
+- **Security Use Case**:
+    
+    - Detect brute-force attacks
+        
+    - Audit password failures from unexpected IPs
+        
+
+---
+
+### **4772 - A Kerberos authentication ticket request failed**
+
+- **Triggered When**: A TGT request fails (unlike 4771, this is post pre-auth).
+    
+- **Possible Causes**:
+    
+    - Time sync issues
+        
+    - Disabled/locked user
+        
+    - Account expired
+        
+- **Security Use Case**:
+    
+    - Track time-based attacks
+        
+    - Correlate with 4768/4769 for failed authentication chains
+        
+
+---
+
+### **4773 - A Kerberos service ticket request failed**
+
+- **Triggered When**: A user has a TGT but the request to access a service fails.
+    
+- **Common Reasons**:
+    
+    - SPN not found
+        
+    - Access denied
+        
+- **Security Use Case**:
+    
+    - Detect attempts to enumerate or access unauthorized services
+        
+
+---
+
+## 👤 **Account Mapping & NTLM Validation Events**
+
+---
+
+### **4774 - An account was mapped for logon**
+
+- **Triggered When**: A certificate is mapped to a user account (e.g., smart card).
+    
+- **Security Use Case**:
+    
+    - Validate successful certificate-based logons
+        
+
+---
+
+### **4775 - An account could not be mapped for logon**
+
+- **Triggered When**: A certificate could not be mapped to a user.
+    
+- **Common Causes**:
+    
+    - Certificate not associated with any account
+        
+- **Security Use Case**:
+    
+    - Track failed smart card logons or potential spoofing attempts
+        
+
+---
+
+### **4776 - The domain controller attempted to validate credentials**
+
+- **Triggered When**: A logon attempt using NTLM credentials is made.
+    
+- **Key Fields**:
+    
+    - `Workstation Name`
+        
+    - `Account Name`
+        
+- **Security Use Case**:
+    
+    - Audit NTLM usage (often discouraged)
+        
+    - Catch use of weak, outdated protocols
+        
+
+---
+
+### **4777 - The domain controller failed to validate the credentials**
+
+- **Triggered When**: An NTLM logon attempt fails.
+    
+- **Security Use Case**:
+    
+    - Track brute-force attempts
+        
+    - Monitor outdated apps still using NTLM
+        
+
+---
+
+## 🚫 **Access Control Policy Enforcement**
+
+---
+
+### **4820 - A Kerberos TGT was denied due to access control restrictions**
+
+- **Triggered When**: A device or user tries to obtain a TGT but is blocked by policies (e.g., Conditional Access, device compliance).
+    
+- **Security Use Case**:
+    
+    - Enforce Zero Trust policies
+        
+    - Detect non-compliant or rogue devices
+        
+    - Validate effectiveness of group/device policies
+        
+
+---
+
+## 📊 **Correlating Events in SIEM or Detection Rules**
 
-TGT (Ticket Granting Ticket) – Initial ticket obtained upon successful logon.
-
-ST (Service Ticket) – Ticket used to access specific network services.
-
-SPN (Service Principal Name) – Unique identifier for each service in the domain.
-
-🧾 Detailed Breakdown of Kerberos and Account-Related Event IDs
-4768 - A Kerberos authentication ticket (TGT) was requested
-Triggered When: A user logs on or a machine starts up and requests a TGT from the KDC.
-
-Key Fields:
-
-Account Name
-
-Client Address (IP of requester)
-
-Ticket Encryption Type (e.g., AES, RC4)
-
-Security Use Case:
-
-Baseline logon patterns
-
-Detect unusual logon sources or high frequency of TGT requests
-
-4769 - A Kerberos service ticket was requested
-Triggered When: A user with a valid TGT requests access to a service (e.g., file server).
-
-Key Fields:
-
-Service Name (SPN requested)
-
-Client Address
-
-Security Use Case:
-
-Map lateral movement (e.g., mimikatz pass-the-ticket)
-
-Detect unusual SPNs or high-volume ST requests
-
-4770 - A Kerberos service ticket was renewed
-Triggered When: A service ticket is renewed (valid for another time period).
-
-Key Fields:
-
-Renewed Ticket Encryption Type
-
-Service Name
-
-Security Use Case:
-
-Rarely used in alerts but can track abnormal persistence of sessions
-
-4771 - Kerberos pre-authentication failed
-Triggered When: A user attempts to log on but fails at the pre-authentication stage.
-
-Key Fields:
-
-Failure Code (e.g., 0x18 = bad password)
-
-Client Address
-
-Security Use Case:
-
-Detect brute-force attacks
-
-Audit password failures from unexpected IPs
-
-4772 - A Kerberos authentication ticket request failed
-Triggered When: A TGT request fails (unlike 4771, this is post pre-auth).
-
-Possible Causes:
-
-Time sync issues
-
-Disabled/locked user
-
-Account expired
-
-Security Use Case:
-
-Track time-based attacks
-
-Correlate with 4768/4769 for failed authentication chains
-
-4773 - A Kerberos service ticket request failed
-Triggered When: A user has a TGT but the request to access a service fails.
-
-Common Reasons:
-
-SPN not found
-
-Access denied
-
-Security Use Case:
-
-Detect attempts to enumerate or access unauthorized services
-
-👤 Account Mapping & NTLM Validation Events
-4774 - An account was mapped for logon
-Triggered When: A certificate is mapped to a user account (e.g., smart card).
-
-Security Use Case:
-
-Validate successful certificate-based logons
-
-4775 - An account could not be mapped for logon
-Triggered When: A certificate could not be mapped to a user.
-
-Common Causes:
-
-Certificate not associated with any account
-
-Security Use Case:
-
-Track failed smart card logons or potential spoofing attempts
-
-4776 - The domain controller attempted to validate credentials
-Triggered When: A logon attempt using NTLM credentials is made.
-
-Key Fields:
-
-Workstation Name
-
-Account Name
-
-Security Use Case:
-
-Audit NTLM usage (often discouraged)
-
-Catch use of weak, outdated protocols
-
-4777 - The domain controller failed to validate the credentials
-Triggered When: An NTLM logon attempt fails.
-
-Security Use Case:
-
-Track brute-force attempts
-
-Monitor outdated apps still using NTLM
-
-🚫 Access Control Policy Enforcement
-4820 - A Kerberos TGT was denied due to access control restrictions
-Triggered When: A device or user tries to obtain a TGT but is blocked by policies (e.g., Conditional Access, device compliance).
-
-Security Use Case:
-
-Enforce Zero Trust policies
-
-Detect non-compliant or rogue devices
-
-Validate effectiveness of group/device policies
-
-📊 Correlating Events in SIEM or Detection Rules
 To build detection or monitoring pipelines:
 
-Correlation Logic	Alert Type
-Multiple 4771 from one IP	Brute-force or password spray
-Rare 4769 SPNs requested	Recon/lateral movement
-4773 → 4769 patterns	Unauthorized service access
-Many 4820 from same host	Device compliance issues
-4775 without 4774	Smart card misconfig or misuse
-Excessive 4777	NTLM brute-force attempts
+| Correlation Logic             | Alert Type                     |
+| ----------------------------- | ------------------------------ |
+| Multiple **4771** from one IP | Brute-force or password spray  |
+| Rare **4769** SPNs requested  | Recon/lateral movement         |
+| **4773** → **4769** patterns  | Unauthorized service access    |
+| Many **4820** from same host  | Device compliance issues       |
+| **4775** without 4774         | Smart card misconfig or misuse |
+| Excessive **4777**            | NTLM brute-force attempts      |
